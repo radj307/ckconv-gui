@@ -8,11 +8,10 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-using ckconv_gui.Measurement.Enum;
-
-namespace ckconv_gui.Properties
-{
-
+namespace ckconv_gui.Properties {
+    using System;
+    
+    
     /// <summary>
     ///   A strongly-typed resource class, for looking up localized strings, etc.
     /// </summary>
@@ -62,12 +61,12 @@ namespace ckconv_gui.Properties
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type SystemID.Byte[].
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
-        internal static byte[] ckconv_exe {
+        internal static System.Drawing.Icon ckconv {
             get {
-                object obj = ResourceManager.GetObject("ckconv_exe", resourceCulture);
-                return ((byte[])(obj));
+                object obj = ResourceManager.GetObject("ckconv", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
             }
         }
     }

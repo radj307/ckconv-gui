@@ -1,4 +1,6 @@
-﻿using ckconv_gui.Measurement.Enum;
+﻿using ckconv_gui.Measurement;
+using ckconv_gui.Measurement.Enum;
+using ckconv_gui.Measurement.Systems;
 using ImportedWPF.Collections;
 using System;
 using System.Globalization;

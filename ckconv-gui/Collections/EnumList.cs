@@ -6,9 +6,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Linq;
 
-namespace ckconv_gui
+namespace ckconv_gui.Collections
 {
     [DoNotNotify]
     public class EnumList<T> : IList, ICollection, IEnumerable, IList<T>, IImmutableList<T>, ICollection<T>, IEnumerable<T>, IReadOnlyList<T>, IReadOnlyCollection<T>, INotifyCollectionChanged, INotifyPropertyChanged where T : struct, Enum

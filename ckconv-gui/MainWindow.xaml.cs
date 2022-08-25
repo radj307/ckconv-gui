@@ -1,7 +1,10 @@
-﻿using System;
+﻿using ckconv_gui.Measurement;
+using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
 
 namespace ckconv_gui
 {
@@ -57,7 +60,32 @@ namespace ckconv_gui
             case System.Windows.Input.Key.Enter:
                 window.Focus();
                 break;
-            default:break;
+            default: break;
+            }
+        }
+        private void commandBoxCommitButton_Click(object sender, RoutedEventArgs e)
+        {
+            string text = commandBox.Text;
+            if (text.Length == 0 || text.All(char.IsWhiteSpace))
+                return;
+            else if (commandBox.GetBindingExpression(TextBox.TextProperty) is BindingExpression bExpr)
+            {
+                try
+                {
+                    bExpr.UpdateSource();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Couldn't parse expression '{text}' due to an exception!\n\n{ex.Message}", "Invalid Expression", MessageBoxButton.OK, MessageBoxImage.Error, MessageBoxResult.OK);
+                }
+            }
+        }
+        private void removeButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button b)
+            {
+                var item = b.CommandParameter;
+                Conversions.Remove(item);
             }
         }
     }

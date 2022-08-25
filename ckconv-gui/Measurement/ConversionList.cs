@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 using System.Collections.Specialized;
 using System.ComponentModel;
 
-namespace ckconv_gui
+namespace ckconv_gui.Measurement
 {
     [DoNotNotify]
     public class ConversionList : IList, ICollection, IEnumerable, IList<Conversion>, IImmutableList<Conversion>, ICollection<Conversion>, IEnumerable<Conversion>, IReadOnlyList<Conversion>, IReadOnlyCollection<Conversion>, INotifyCollectionChanged, INotifyPropertyChanged

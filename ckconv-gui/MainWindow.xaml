@@ -2,20 +2,23 @@
     x:Class="ckconv_gui.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:collections="clr-namespace:ImportedWPF.Collections;assembly=ImportedWPF"
     xmlns:controls="clr-namespace:ImportedWPF.Controls;assembly=ImportedWPF"
-    xmlns:conv="clr-namespace:ImportedWPF.Converters;assembly=ImportedWPF"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:helpers="clr-namespace:ckconv_gui.Helpers"
-    xmlns:local="clr-namespace:ckconv_gui"
+    xmlns:localCollections="clr-namespace:ckconv_gui.Collections"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:measure="clr-namespace:ckconv_gui.Measurement"
     x:Name="window"
     Title="Creation Kit Unit Converter"
+    Width="500"
+    Height="100"
     Margin="0"
     Padding="0"
+    AllowsTransparency="True"
     DataContext="{RelativeSource Self}"
     FontFamily="{StaticResource InterFont}"
     FontSize="{StaticResource GlobalFontSize}"
+    Icon="/Resources/icons/ckconv.ico"
     SizeToContent="WidthAndHeight"
     WindowStyle="None"
     mc:Ignorable="d">
@@ -38,14 +41,12 @@
         <SolidColorBrush x:Key="ControlBackgroundIsPressedBrush" Color="#CCC" />
         <SolidColorBrush x:Key="ControlForegroundBrush" Color="#000" />
 
-        <local:ConversionList x:Key="Conversions">
-            <local:ConversionList.Items>
-                <local:Conversion InValue="1" />
-            </local:ConversionList.Items>
-        </local:ConversionList>
-        <local:SystemsList x:Key="Systems" />
+        <measure:ConversionList x:Key="Conversions" />
+        <localCollections:SystemsList x:Key="Systems" />
         <helpers:SystemToUnitListConverter x:Key="SystemToUnitListConverter" />
-        <local:ExpressionBuilder x:Key="exprBuilder" />
+        <helpers:StringToDecimalConverter x:Key="StringToDecimalConverter" />
+        <measure:ExpressionBuilder x:Key="exprBuilder" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     </Window.Resources>
 
     <!--  Layout  -->
@@ -53,8 +54,8 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="24" />
-                <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
             </Grid.RowDefinitions>
             <!--  Caption Bar  -->
             <Grid x:Name="CaptionBar">
@@ -126,118 +127,62 @@
                     Content="❌" />
             </Grid>
 
-            <!--  DataGrid  -->
-            <StackPanel Grid.Row="1">
+            <!--  CommandBox  -->
+            <Border
+                Grid.Row="1"
+                Margin="5,3"
+                Background="{StaticResource TextBoxBackground}"
+                Style="{StaticResource SectionStyle}">
                 <Grid>
-                    <Border x:Name="gridMask" Style="{StaticResource RoundBorderMaskStyle}" />
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                    <ListBox
-                        Margin="5,3"
-                        Background="#0000"
-                        BorderThickness="0"
-                        ItemsSource="{Binding Items, Source={StaticResource Conversions}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                        <ListBox.OpacityMask>
-                            <VisualBrush Visual="{Binding ElementName=gridMask}" />
-                        </ListBox.OpacityMask>
+                    <Grid Grid.Column="0">
+                        <TextBox
+                            x:Name="commandBox"
+                            Margin="5,3"
+                            VerticalAlignment="Center"
+                            Background="#0000"
+                            BorderThickness="0"
+                            KeyDown="commandBox_KeyDown"
+                            Style="{StaticResource TextBoxStyle}"
+                            Text="{Binding Text, Source={StaticResource exprBuilder}, Mode=TwoWay, UpdateSourceTrigger=Explicit}" />
+                        <TextBlock
+                            Margin="10,3"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource WatermarkTextBlockStyle}"
+                            Text="Enter a conversion expression..."
+                            ToolTip="Accepts conversion expressions in the same format as ckconv CLI: ( &lt;UNIT&gt;  &lt;VALUE&gt;  &lt;OUT_UNIT&gt; )"
+                            Visibility="{Binding Text.IsEmpty, ElementName=commandBox, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </Grid>
+                    <Button
+                        x:Name="commandBoxCommitButton"
+                        Grid.Column="1"
+                        Width="{Binding Height, RelativeSource={RelativeSource Self}, Mode=OneTime}"
+                        VerticalAlignment="Stretch"
+                        Click="commandBoxCommitButton_Click"
+                        Content="+"
+                        Style="{StaticResource ButtonStyle}" />
+                </Grid>
+            </Border>
 
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <DockPanel FlowDirection="LeftToRight">
+            <!--  DataGrid  -->
+            <StackPanel Grid.Row="2">
+                <Grid>
+                    <Border Style="{StaticResource RoundBorderMaskStyle}">
+                        <ListBox
+                            Margin="5,3"
+                            Background="#0000"
+                            BorderThickness="0"
+                            ItemsSource="{Binding Items, Source={StaticResource Conversions}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type measure:Conversion}">
+                                    <DockPanel FlowDirection="LeftToRight" LastChildFill="True">
 
-                                    <Grid Margin="3,1">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <ComboBox
-                                            Name="systemSelector"
-                                            Margin="1,0"
-                                            ItemsSource="{Binding Items, Source={StaticResource Systems}}"
-                                            SelectedItem="{Binding InUnit.SystemID, Mode=OneWay}"
-                                            Style="{StaticResource ComboBoxStyle}" />
-                                        <ComboBox
-                                            Name="unitSelector"
-                                            Grid.Column="1"
-                                            Margin="1,0"
-                                            DisplayMemberPath="FullName"
-                                            ItemsSource="{Binding SelectedItem, ElementName=systemSelector, Mode=OneWay, Converter={StaticResource SystemToUnitListConverter}}"
-                                            SelectedItem="{Binding InUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                            Style="{StaticResource ComboBoxStyle}" />
-                                    </Grid>
-
-                                    <controls:NumericUpDown
-                                        Margin="1,1"
-                                        HorizontalAlignment="Stretch"
-                                        Value="{Binding InValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-                                    <Grid Margin="3,1">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <ComboBox
-                                            Name="outSystemSelector"
-                                            Margin="1,0"
-                                            ItemsSource="{Binding Items, Source={StaticResource Systems}}"
-                                            SelectedItem="{Binding OutUnit.SystemID, Mode=OneWay}"
-                                            Style="{StaticResource ComboBoxStyle}" />
-                                        <ComboBox
-                                            Name="outUnitSelector"
-                                            Grid.Column="1"
-                                            Margin="1,0"
-                                            DisplayMemberPath="FullName"
-                                            ItemsSource="{Binding SelectedItem, ElementName=outSystemSelector, Mode=OneWay, Converter={StaticResource SystemToUnitListConverter}}"
-                                            SelectedItem="{Binding OutUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                            Style="{StaticResource ComboBoxStyle}" />
-                                    </Grid>
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        Style="{StaticResource TextBlockStyle}"
-                                        Text="{Binding OutValue, Mode=OneWay}" />
-                                </DockPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    <!--<DataGrid
-                        AutoGenerateColumns="False"
-                        CanUserAddRows="True"
-                        DataContext="{RelativeSource Self}"
-                        ItemsSource="{StaticResource Conversions}"
-                        Style="{StaticResource DataGridStyle}"
-                        Visibility="Collapsed">
-                        <DataGrid.OpacityMask>
-                            <VisualBrush Visual="{Binding ElementName=gridMask}" />
-                        </DataGrid.OpacityMask>
-
-                        <DataGrid.Columns>
-                            <DataGridTemplateColumn>
-                                <DataGridTemplateColumn.Header>
-                                    <Button
-                                        Width="{Binding Height, RelativeSource={RelativeSource Self}}"
-                                        Click="AddNew_Click"
-                                        Content="🞤"
-                                        Style="{StaticResource ButtonStyle}" />
-
-                                </DataGridTemplateColumn.Header>
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Button
-                                            Width="{Binding Height, RelativeSource={RelativeSource Self}}"
-                                            Click="Remove_Click"
-                                            Style="{StaticResource ButtonStyle}">
-                                            <Path
-                                                Data="M 2 0 H 5"
-                                                Stretch="Fill"
-                                                Stroke="{StaticResource AccentForeground}"
-                                                StrokeThickness="2" />
-                                        </Button>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTemplateColumn MinWidth="200" Header="Input Unit">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="3,1">
+                                        <Grid Margin="0,1,3,1">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="*" />
@@ -245,7 +190,8 @@
                                             <ComboBox
                                                 Name="systemSelector"
                                                 Margin="1,0"
-                                                ItemsSource="{Binding Systems, Source={StaticResource Systems}}"
+                                                ItemsSource="{Binding Items, Source={StaticResource Systems}}"
+                                                SelectedItem="{Binding InUnit.SystemID, Mode=OneWay}"
                                                 Style="{StaticResource ComboBoxStyle}" />
                                             <ComboBox
                                                 Name="unitSelector"
@@ -256,22 +202,13 @@
                                                 SelectedItem="{Binding InUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                 Style="{StaticResource ComboBoxStyle}" />
                                         </Grid>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTemplateColumn MinWidth="60" Header="Value">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
+
                                         <controls:NumericUpDown
-                                            Margin="1,1"
+                                            MinWidth="40"
+                                            Margin="3,1"
                                             HorizontalAlignment="Stretch"
                                             Value="{Binding InValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTemplateColumn MinWidth="200" Header="Output Unit">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
+
                                         <Grid Margin="3,1">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
@@ -280,7 +217,8 @@
                                             <ComboBox
                                                 Name="outSystemSelector"
                                                 Margin="1,0"
-                                                ItemsSource="{Binding Systems, Source={StaticResource Systems}}"
+                                                ItemsSource="{Binding Items, Source={StaticResource Systems}}"
+                                                SelectedItem="{Binding OutUnit.SystemID, Mode=OneWay}"
                                                 Style="{StaticResource ComboBoxStyle}" />
                                             <ComboBox
                                                 Name="outUnitSelector"
@@ -291,46 +229,34 @@
                                                 SelectedItem="{Binding OutUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                 Style="{StaticResource ComboBoxStyle}" />
                                         </Grid>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTemplateColumn MinWidth="40" Header="Result">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Style="{StaticResource TextBlockStyle}" Text="{Binding OutValue, Mode=OneWay}" />
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>-->
+
+                                        <TextBlock
+                                            Margin="3,0"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource TextBlockStyle}"
+                                            Text="{Binding OutValue, Mode=OneWay}" />
+                                        <Button
+                                            Name="removeButton"
+                                            Width="{Binding Height, RelativeSource={RelativeSource Self}}"
+                                            Click="removeButton_Click"
+                                            CommandParameter="{Binding}"
+                                            Content="-"
+                                            DockPanel.Dock="Right"
+                                            Style="{StaticResource ButtonStyle}" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
                 </Grid>
             </StackPanel>
-
-            <!--    -->
-            <Grid Grid.Row="2">
-                <Border x:Name="commandBoxMask" Style="{StaticResource RoundBorderMaskStyle}" />
-                <TextBox
-                    x:Name="commandBox"
-                    Margin="5,3"
-                    Padding="5,3"
-                    AcceptsReturn="False"
-                    KeyDown="commandBox_KeyDown"
-                    MaxLines="1"
-                    MinLines="1"
-                    Style="{StaticResource TextBoxStyle}"
-                    Text="{Binding Text, Mode=TwoWay, Source={StaticResource exprBuilder}, UpdateSourceTrigger=LostFocus}">
-                    <TextBox.OpacityMask>
-                        <VisualBrush Visual="{Binding ElementName=commandBoxMask}" />
-                    </TextBox.OpacityMask>
-                </TextBox>
-            </Grid>
         </Grid>
     </Border>
 
     <WindowChrome.WindowChrome>
         <WindowChrome
             CaptionHeight="{Binding ActualHeight, ElementName=CaptionBar}"
-            CornerRadius="{StaticResource WindowCornerRadius}"
+            CornerRadius="{StaticResource RoundedWindowCorner}"
             GlassFrameThickness="0"
             ResizeBorderThickness="{x:Static SystemParameters.WindowResizeBorderThickness}" />
     </WindowChrome.WindowChrome>
