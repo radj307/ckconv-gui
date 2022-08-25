@@ -17,9 +17,10 @@ namespace ckconv_gui.Helpers
                 return sys switch
                 {
                     EMeasurementSystem.Metric => MetricSystem.StaticUnits,
-                    EMeasurementSystem.Imperial => ImperialSystem.StaticUnits,
                     EMeasurementSystem.CreationKit => CreationKitSystem.StaticUnits,
-                    _ => null,
+                    EMeasurementSystem.Imperial => ImperialSystem.StaticUnits,
+                    EMeasurementSystem.All => MeasurementSystem.AllUnits,
+                    _ => MeasurementSystem.NoUnits,
                 };
             }
             return null;
@@ -27,7 +28,7 @@ namespace ckconv_gui.Helpers
         public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (value is ObservableImmutableList<Unit> list)
-                return list.FirstOrDefault()?.EMeasurementSystem;
+                return list.FirstOrDefault()?.SystemID;
             else return null;
         }
     }

@@ -9,8 +9,6 @@
     xmlns:helpers="clr-namespace:ckconv_gui.Helpers"
     xmlns:local="clr-namespace:ckconv_gui"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:units="clr-namespace:ckconv_gui.Measurement.Struct"
-    xmlns:vm="clr-namespace:ckconv_gui.ViewModels"
     x:Name="window"
     Title="Creation Kit Unit Converter"
     Margin="0"
@@ -21,6 +19,12 @@
     SizeToContent="WidthAndHeight"
     WindowStyle="None"
     mc:Ignorable="d">
+    <Window.Style>
+        <Style TargetType="{x:Type Window}">
+            <Setter Property="FontFamily" Value="{StaticResource InterFont}" />
+            <Setter Property="FontSize" Value="{StaticResource GlobalFontSize}" />
+        </Style>
+    </Window.Style>
     <Window.Resources>
         <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#333" />
         <CornerRadius x:Key="WindowCornerRadius">5</CornerRadius>
@@ -34,9 +38,14 @@
         <SolidColorBrush x:Key="ControlBackgroundIsPressedBrush" Color="#CCC" />
         <SolidColorBrush x:Key="ControlForegroundBrush" Color="#000" />
 
-        <local:ConversionList x:Key="Conversions" />
-        <vm:SystemsList x:Key="Systems" />
+        <local:ConversionList x:Key="Conversions">
+            <local:ConversionList.Items>
+                <local:Conversion InValue="1" />
+            </local:ConversionList.Items>
+        </local:ConversionList>
+        <local:SystemsList x:Key="Systems" />
         <helpers:SystemToUnitListConverter x:Key="SystemToUnitListConverter" />
+        <local:ExpressionBuilder x:Key="exprBuilder" />
     </Window.Resources>
 
     <!--  Layout  -->
@@ -121,12 +130,81 @@
             <StackPanel Grid.Row="1">
                 <Grid>
                     <Border x:Name="gridMask" Style="{StaticResource RoundBorderMaskStyle}" />
-                    <DataGrid
+
+                    <ListBox
+                        Margin="5,3"
+                        Background="#0000"
+                        BorderThickness="0"
+                        ItemsSource="{Binding Items, Source={StaticResource Conversions}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <ListBox.OpacityMask>
+                            <VisualBrush Visual="{Binding ElementName=gridMask}" />
+                        </ListBox.OpacityMask>
+
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel FlowDirection="LeftToRight">
+
+                                    <Grid Margin="3,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox
+                                            Name="systemSelector"
+                                            Margin="1,0"
+                                            ItemsSource="{Binding Items, Source={StaticResource Systems}}"
+                                            SelectedItem="{Binding InUnit.SystemID, Mode=OneWay}"
+                                            Style="{StaticResource ComboBoxStyle}" />
+                                        <ComboBox
+                                            Name="unitSelector"
+                                            Grid.Column="1"
+                                            Margin="1,0"
+                                            DisplayMemberPath="FullName"
+                                            ItemsSource="{Binding SelectedItem, ElementName=systemSelector, Mode=OneWay, Converter={StaticResource SystemToUnitListConverter}}"
+                                            SelectedItem="{Binding InUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Style="{StaticResource ComboBoxStyle}" />
+                                    </Grid>
+
+                                    <controls:NumericUpDown
+                                        Margin="1,1"
+                                        HorizontalAlignment="Stretch"
+                                        Value="{Binding InValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                    <Grid Margin="3,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox
+                                            Name="outSystemSelector"
+                                            Margin="1,0"
+                                            ItemsSource="{Binding Items, Source={StaticResource Systems}}"
+                                            SelectedItem="{Binding OutUnit.SystemID, Mode=OneWay}"
+                                            Style="{StaticResource ComboBoxStyle}" />
+                                        <ComboBox
+                                            Name="outUnitSelector"
+                                            Grid.Column="1"
+                                            Margin="1,0"
+                                            DisplayMemberPath="FullName"
+                                            ItemsSource="{Binding SelectedItem, ElementName=outSystemSelector, Mode=OneWay, Converter={StaticResource SystemToUnitListConverter}}"
+                                            SelectedItem="{Binding OutUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Style="{StaticResource ComboBoxStyle}" />
+                                    </Grid>
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Style="{StaticResource TextBlockStyle}"
+                                        Text="{Binding OutValue, Mode=OneWay}" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <!--<DataGrid
                         AutoGenerateColumns="False"
                         CanUserAddRows="True"
                         DataContext="{RelativeSource Self}"
                         ItemsSource="{StaticResource Conversions}"
-                        Style="{StaticResource DataGridStyle}">
+                        Style="{StaticResource DataGridStyle}"
+                        Visibility="Collapsed">
                         <DataGrid.OpacityMask>
                             <VisualBrush Visual="{Binding ElementName=gridMask}" />
                         </DataGrid.OpacityMask>
@@ -136,15 +214,19 @@
                                 <DataGridTemplateColumn.Header>
                                     <Button
                                         Width="{Binding Height, RelativeSource={RelativeSource Self}}"
+                                        Click="AddNew_Click"
                                         Content="🞤"
                                         Style="{StaticResource ButtonStyle}" />
 
                                 </DataGridTemplateColumn.Header>
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Width="{Binding Height, RelativeSource={RelativeSource Self}}" Style="{StaticResource ButtonStyle}">
+                                        <Button
+                                            Width="{Binding Height, RelativeSource={RelativeSource Self}}"
+                                            Click="Remove_Click"
+                                            Style="{StaticResource ButtonStyle}">
                                             <Path
-                                                Data="M 0 0 H 98"
+                                                Data="M 2 0 H 5"
                                                 Stretch="Fill"
                                                 Stroke="{StaticResource AccentForeground}"
                                                 StrokeThickness="2" />
@@ -220,7 +302,7 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
-                    </DataGrid>
+                    </DataGrid>-->
                 </Grid>
             </StackPanel>
 
@@ -228,9 +310,15 @@
             <Grid Grid.Row="2">
                 <Border x:Name="commandBoxMask" Style="{StaticResource RoundBorderMaskStyle}" />
                 <TextBox
+                    x:Name="commandBox"
                     Margin="5,3"
+                    Padding="5,3"
+                    AcceptsReturn="False"
+                    KeyDown="commandBox_KeyDown"
+                    MaxLines="1"
+                    MinLines="1"
                     Style="{StaticResource TextBoxStyle}"
-                    Text="">
+                    Text="{Binding Text, Mode=TwoWay, Source={StaticResource exprBuilder}, UpdateSourceTrigger=LostFocus}">
                     <TextBox.OpacityMask>
                         <VisualBrush Visual="{Binding ElementName=commandBoxMask}" />
                     </TextBox.OpacityMask>

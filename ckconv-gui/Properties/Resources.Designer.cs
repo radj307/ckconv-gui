@@ -62,7 +62,7 @@ namespace ckconv_gui.Properties
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type EMeasurementSystem.Byte[].
+        ///   Looks up a localized resource of type SystemID.Byte[].
         /// </summary>
         internal static byte[] ckconv_exe {
             get {

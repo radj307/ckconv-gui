@@ -9,7 +9,7 @@ using System.ComponentModel;
 
 namespace ckconv_gui
 {
-    [DoNotNotifyAttribute]
+    [DoNotNotify]
     public class ConversionList : IList, ICollection, IEnumerable, IList<Conversion>, IImmutableList<Conversion>, ICollection<Conversion>, IEnumerable<Conversion>, IReadOnlyList<Conversion>, IReadOnlyCollection<Conversion>, INotifyCollectionChanged, INotifyPropertyChanged
     {
         public object? this[int index] { get => ((IList)this.Items)[index]; set => ((IList)this.Items)[index] = value; }

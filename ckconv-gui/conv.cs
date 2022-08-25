@@ -1,9 +1,14 @@
 ﻿using ckconv_gui.Measurement.Enum;
+using ImportedWPF.Collections;
+using PropertyChanged;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
+using TypeExtensions;
 
 namespace ckconv_gui
 {
@@ -21,11 +26,20 @@ namespace ckconv_gui
         }
     }
 
+    public interface IUnit
+    {
+        EMeasurementSystem SystemID { get; }
+        double UnitConversionFactor { get; }
+        string FullName { get; }
+        string Symbol { get; }
+        List<string> ExtraNames { get; }
+    }
+
     /**
      * @struct	Unit
      * @brief	Represents a length measurement unit. *(Does not contain a value.)*
      */
-    public class Unit
+    public class Unit : IUnit
     {
         private readonly string? _fullName;
         private readonly string _fullNamePluralExt;
@@ -33,7 +47,7 @@ namespace ckconv_gui
 
         public Unit(EMeasurementSystem system, double unitcf, string symbol, string? fullName, string fullNamePluralExt = "s")
         {
-            EMeasurementSystem = system;
+            SystemID = system;
             UnitConversionFactor = unitcf;
             Symbol = symbol;
             _fullName = fullName;
@@ -44,7 +58,7 @@ namespace ckconv_gui
 
         public Unit(EMeasurementSystem system, double unitcf, string symbol, string? fullName, string fullNamePluralExt, bool pluralIsOverrideNotExt, params string[] extraNames)
         {
-            EMeasurementSystem = system;
+            SystemID = system;
             UnitConversionFactor = unitcf;
             Symbol = symbol;
             _fullName = fullName;
@@ -53,7 +67,8 @@ namespace ckconv_gui
             ExtraNames = extraNames.ToList();
         }
 
-        public EMeasurementSystem EMeasurementSystem { get; private set; }
+        public static readonly Unit NullUnit = new(EMeasurementSystem.None, 1.0, "null", "null", string.Empty);
+        public EMeasurementSystem SystemID { get; private set; }
         public double UnitConversionFactor { get; private set; }
         public string Symbol { get; private set; }
         public List<string> ExtraNames { get; }
@@ -103,12 +118,15 @@ namespace ckconv_gui
         private string? _name;
         public string Name => _name ??= Enum.GetName(ID) ?? string.Empty;
 
-        public List<Unit> Units { get; }
+        public ObservableImmutableList<Unit> Units { get; }
+        public static ObservableImmutableList<Unit> NoUnits { get; } = new();
+        public static ObservableImmutableList<Unit> AllUnits { get; } = new();
 
         public Unit Base { get; }
 
-        public MeasurementSystem(EMeasurementSystem systemID, List<Unit> units, Unit @base)
+        public MeasurementSystem(EMeasurementSystem systemID, ObservableImmutableList<Unit> units, Unit @base)
         {
+            AllUnits.AddRangeIfUnique(units);
             ID = systemID;
             Units = units;
             Base = @base;
@@ -142,9 +160,68 @@ namespace ckconv_gui
         }
     }
 
+    public class MeasurementSystemViewModel : INotifyPropertyChanged, INotifyCollectionChanged
+    {
+        #region Properties
+        private EMeasurementSystem _id = EMeasurementSystem.All;
+        public EMeasurementSystem ID
+        {
+            get => _id;
+            set
+            {
+                if (_id.Equals(value)) return;
+
+                switch (value)
+                {
+                case EMeasurementSystem.None:
+                    Units = NoUnits;
+                    break;
+                case EMeasurementSystem.Metric:
+                    Units = MetricSystem.StaticUnits;
+                    break;
+                case EMeasurementSystem.CreationKit:
+                    Units = CreationKitSystem.StaticUnits;
+                    break;
+                case EMeasurementSystem.Imperial:
+                    Units = ImperialSystem.StaticUnits;
+                    break;
+                case EMeasurementSystem.All:
+                    Units = MeasurementSystem.AllUnits;
+                    break;
+                default:
+                    return; //< invalid system id
+                }
+
+                _id = value;
+
+                NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(Units));
+            }
+        }
+        public string Name => Enum.GetName(ID) ?? string.Empty;
+        private static readonly ObservableImmutableList<Unit> NoUnits = new();
+        public ObservableImmutableList<Unit> Units
+        {
+            get;
+            set;
+        } = MeasurementSystem.AllUnits;
+        #endregion Properties
+
+        #region Events
+        public event NotifyCollectionChangedEventHandler? CollectionChanged
+        {
+            add => this.Units.CollectionChanged += value;
+            remove => this.Units.CollectionChanged -= value;
+        }
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "") => PropertyChanged?.Invoke(this, new(propertyName));
+        #endregion Events
+    }
+
     public class MetricSystem : MeasurementSystem
     {
-        public static readonly List<Unit> StaticUnits = new()
+        static MetricSystem() => AllUnits.AddRangeIfUnique(StaticUnits);
+        public static readonly ObservableImmutableList<Unit> StaticUnits = new()
         {
             new(EMeasurementSystem.Metric, Math.Pow(10.0, (double)SIPrefix.YOCTO), "ym", "Yoctometer"),
             new(EMeasurementSystem.Metric, Math.Pow(10.0, (double)SIPrefix.ZEPTO), "zm", "Zeptometer"),
@@ -186,7 +263,8 @@ namespace ckconv_gui
 
     public class CreationKitSystem : MeasurementSystem
     {
-        public static readonly List<Unit> StaticUnits = new()
+        static CreationKitSystem() => AllUnits.AddRangeIfUnique(StaticUnits);
+        public static readonly ObservableImmutableList<Unit> StaticUnits = new()
         {
             new(EMeasurementSystem.CreationKit, Math.Pow(10.0, (double)SIPrefix.YOCTO), "yu", "Yoctounit"),
             new(EMeasurementSystem.CreationKit, Math.Pow(10.0, (double)SIPrefix.ZEPTO), "zu", "Zeptounit"),
@@ -228,7 +306,8 @@ namespace ckconv_gui
 
     public class ImperialSystem : MeasurementSystem
     {
-        public static readonly List<Unit> StaticUnits = new()
+        static ImperialSystem() => AllUnits.AddRangeIfUnique(StaticUnits);
+        public static readonly ObservableImmutableList<Unit> StaticUnits = new()
         {
             new(EMeasurementSystem.Imperial, (1.0 / 17280.0), "", "Twip"),
             new(EMeasurementSystem.Imperial, (1.0 / 12000.0), "th", "Thou"),
@@ -324,9 +403,9 @@ namespace ckconv_gui
                 throw new ArgumentException($"Illegal input conversion factor '{input.UnitConversionFactor}'!", nameof(input));
             else if (output.UnitConversionFactor.Equals(0.0))
                 throw new ArgumentException($"Illegal input conversion factor '{input.UnitConversionFactor}'!", nameof(output));
-            if (input.EMeasurementSystem.Equals(output.EMeasurementSystem))
+            if (input.SystemID.Equals(output.SystemID))
                 return ConvertUnit(input.UnitConversionFactor, value, output.UnitConversionFactor);
-            return ConvertSystem(input.EMeasurementSystem, input.ConvertToBase(value), output.EMeasurementSystem);
+            return ConvertSystem(input.SystemID, input.ConvertToBase(value), output.SystemID) / output.UnitConversionFactor;
         }
 
         public static Unit? GetUnit(string s, Unit? defaultUnit = null)
@@ -341,7 +420,7 @@ namespace ckconv_gui
 
     public class Conversion : INotifyPropertyChanged
     {
-        public Unit? _inUnit;
+        public Unit? _inUnit = Unit.NullUnit;
         public Unit? InUnit
         {
             get => _inUnit;
@@ -363,7 +442,7 @@ namespace ckconv_gui
                 NotifyPropertyChanged(nameof(OutValue));
             }
         }
-        public Unit? _outUnit;
+        public Unit? _outUnit = Unit.NullUnit;
         public Unit? OutUnit
         {
             get => _outUnit;
@@ -385,5 +464,99 @@ namespace ckconv_gui
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void NotifyPropertyChanged([CallerMemberName] string propertyName = "") => PropertyChanged?.Invoke(this, new(propertyName));
+    }
+
+    [DoNotNotify]
+    public class ExpressionBuilder : INotifyPropertyChanged
+    {
+        public Conversion[] ParseExpression(string text)
+        {
+            const string rgx = "^\\s*([\\.\\-0-9]+|[a-z\'\"]+)\\s*([\\.\\-0-9]+|[a-z\'\"]+)\\s*([\\.\\-0-9]+|[a-z\'\"]+){0,1}.*$";
+            var matches = Regex.Matches(text, rgx, RegexOptions.Compiled | RegexOptions.IgnoreCase, ParseExpressionTimeout);
+
+            List<Conversion> l = new();
+
+            foreach (Match match in matches)
+            {
+                if (!match.Success) continue;
+
+                GroupCollection groups = match.Groups;
+                //if (groups.Count != 3) throw new Exception($"The regular expression \"{rgx}\" found an unexpected number of capture groups: {captures.Count}");
+
+                Unit? inU = null, outU = null;
+                bool foundInU = false, foundOutU = false;
+                double val = double.NaN;
+                bool foundVal = false;
+
+                for (int i = 1; i < groups.Count; ++i)
+                {
+                    Group group = groups[i];
+
+                    if (group.Value.Length <= 0) continue;
+
+                    if (group.Value.All(char.IsDigit))
+                    {
+                        if (foundVal)
+                            throw new Exception($"An expression cannot have multiple input values! (\"{val}\" & \"{group.Value}\")");
+                        val = Convert.ToDouble(group.Value);
+                        foundVal = true;
+                    }
+                    else if (!foundInU)
+                    {
+                        inU = ConversionAPI.GetUnit(group.Value);
+                        foundInU = true;
+                    }
+                    else if (!foundOutU)
+                    {
+                        outU = ConversionAPI.GetUnit(group.Value);
+                        foundOutU = true;
+                    }
+                    else throw new Exception($"Expression specifies too many units! (\"{inU?.FullName}\", \"{outU?.FullName}\", \"{group.Value}\")");
+                }
+
+                l.Add(new Conversion()
+                {
+                    InUnit = inU,
+                    InValue = val,
+                    OutUnit = outU,
+                });
+            }
+
+            return l.ToArray();
+        }
+
+        public void Reset()
+        {
+            _conversions = null;
+            _text = null;
+            NotifyPropertyChanged(nameof(Text));
+            NotifyPropertyChanged(nameof(Conversions));
+        }
+
+        #region Properties
+        public TimeSpan ParseExpressionTimeout { get; set; } = TimeSpan.FromSeconds(5);
+        private string? _text;
+        public string? Text
+        {
+            get => _text;
+            set
+            {
+                if (value == _text) return;
+
+                _text = value;
+                _conversions = null;
+
+                NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(Conversions));
+            }
+        }
+        private Conversion[]? _conversions = null;
+        public Conversion[]? Conversions => Text is null ? null : (_conversions ??= ParseExpression(Text));
+        #endregion Properties
+
+        #region Events
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "") => PropertyChanged?.Invoke(this, new(propertyName));
+        #endregion Events
     }
 }

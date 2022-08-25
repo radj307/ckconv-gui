@@ -1,4 +1,6 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 
 namespace ckconv_gui
@@ -11,7 +13,24 @@ namespace ckconv_gui
         public MainWindow()
         {
             InitializeComponent();
+
+            ExpressionBuilder.PropertyChanged += HandleExpressionBuilderPropertyChanged;
         }
+
+        private ExpressionBuilder ExpressionBuilder => (FindResource("exprBuilder") as ExpressionBuilder)!;
+        private void HandleExpressionBuilderPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is ExpressionBuilder exprBuilder && (e.PropertyName?.Equals(nameof(ExpressionBuilder.Conversions)) ?? false))
+            {
+                if (exprBuilder.Conversions is not null)
+                {
+                    Conversions.AddRange(exprBuilder.Conversions.AsEnumerable());
+                    exprBuilder.Reset();
+                }
+            }
+        }
+
+        private ConversionList Conversions => (this.FindResource("Conversions") as ConversionList)!;
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
@@ -28,6 +47,17 @@ namespace ckconv_gui
                 Show();
                 break;
             default: break;
+            }
+        }
+
+        private void commandBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+            case System.Windows.Input.Key.Enter:
+                window.Focus();
+                break;
+            default:break;
             }
         }
     }
