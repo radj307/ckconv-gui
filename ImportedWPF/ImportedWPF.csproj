@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\fonts\Inter.ttf" />
+    <None Remove="Resources\icons\ckconv.ico" />
+    <None Remove="Resources\images\background.png" />
+    <None Remove="Resources\images\bringtofront.png" />
+    <None Remove="Resources\images\foreground.png" />
+    <None Remove="Resources\images\reload-white.png" />
+    <None Remove="Resources\images\reload.png" />
+    <None Remove="Resources\images\X.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CodingSeb.Localization" Version="1.2.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Log\Log.csproj" />
+    <ProjectReference Include="..\TypeExtensions\TypeExtensions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\fonts\Inter.ttf" />
+    <Resource Include="Resources\icons\ckconv.ico" />
+    <Resource Include="Resources\images\background.png" />
+    <Resource Include="Resources\images\bringtofront.png" />
+    <Resource Include="Resources\images\foreground.png" />
+    <Resource Include="Resources\images\reload-white.png" />
+    <Resource Include="Resources\images\reload.png" />
+    <Resource Include="Resources\images\X.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

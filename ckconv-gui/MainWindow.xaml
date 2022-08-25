@@ -1,0 +1,249 @@
+﻿<Window
+    x:Class="ckconv_gui.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:collections="clr-namespace:ImportedWPF.Collections;assembly=ImportedWPF"
+    xmlns:controls="clr-namespace:ImportedWPF.Controls;assembly=ImportedWPF"
+    xmlns:conv="clr-namespace:ImportedWPF.Converters;assembly=ImportedWPF"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="clr-namespace:ckconv_gui.Helpers"
+    xmlns:local="clr-namespace:ckconv_gui"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:units="clr-namespace:ckconv_gui.Measurement.Struct"
+    xmlns:vm="clr-namespace:ckconv_gui.ViewModels"
+    x:Name="window"
+    Title="Creation Kit Unit Converter"
+    Margin="0"
+    Padding="0"
+    DataContext="{RelativeSource Self}"
+    FontFamily="{StaticResource InterFont}"
+    FontSize="{StaticResource GlobalFontSize}"
+    SizeToContent="WidthAndHeight"
+    WindowStyle="None"
+    mc:Ignorable="d">
+    <Window.Resources>
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#333" />
+        <CornerRadius x:Key="WindowCornerRadius">5</CornerRadius>
+        <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
+
+        <SolidColorBrush x:Key="TextBoxBackgroundBrush" Color="#222" />
+        <SolidColorBrush x:Key="TextBoxForegroundBrush" Color="WhiteSmoke" />
+
+        <SolidColorBrush x:Key="ControlBackgroundBrush" Color="#888" />
+        <SolidColorBrush x:Key="ControlBackgroundMouseOverBrush" Color="#AAA" />
+        <SolidColorBrush x:Key="ControlBackgroundIsPressedBrush" Color="#CCC" />
+        <SolidColorBrush x:Key="ControlForegroundBrush" Color="#000" />
+
+        <local:ConversionList x:Key="Conversions" />
+        <vm:SystemsList x:Key="Systems" />
+        <helpers:SystemToUnitListConverter x:Key="SystemToUnitListConverter" />
+    </Window.Resources>
+
+    <!--  Layout  -->
+    <Border Background="{StaticResource WindowBackgroundBrush}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="24" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <!--  Caption Bar  -->
+            <Grid x:Name="CaptionBar">
+                <Grid.Resources>
+                    <Style TargetType="{x:Type Button}">
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Background" Value="#0000" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Foreground" Value="{StaticResource TextBoxForegroundBrush}" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="{x:Type Button}">
+                                    <Border
+                                        x:Name="ButtonMouseOver"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        RenderOptions.EdgeMode="Aliased">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="ButtonMouseOver" Property="Background" Value="#22FFFFFF" />
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="ButtonMouseOver" Property="Background" Value="#44FFFFFF" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
+                        <Setter Property="Width" Value="30" />
+                        <Setter Property="Height" Value="30" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="FontWeight" Value="Black" />
+                        <Setter Property="Background" Value="#00000000" />
+                        <Setter Property="Foreground" Value="LightGray" />
+                        <Setter Property="VerticalAlignment" Value="Center" />
+                        <Setter Property="HorizontalContentAlignment" Value="Center" />
+                        <Setter Property="VerticalContentAlignment" Value="Center" />
+                        <Setter Property="IsHitTestVisible" Value="true" />
+                    </Style>
+                </Grid.Resources>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock
+                    Margin="5,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Foreground="LightGray"
+                    Text="{Binding Title, Mode=TwoWay, ElementName=window}" />
+                <Button
+                    Grid.Column="1"
+                    Click="Minimize_Click"
+                    Content="━" />
+                <Button
+                    Grid.Column="2"
+                    Content="⃞"
+                    Visibility="Collapsed" />
+                <Button
+                    Grid.Column="3"
+                    Click="Close_Click"
+                    Content="❌" />
+            </Grid>
+
+            <!--  DataGrid  -->
+            <StackPanel Grid.Row="1">
+                <Grid>
+                    <Border x:Name="gridMask" Style="{StaticResource RoundBorderMaskStyle}" />
+                    <DataGrid
+                        AutoGenerateColumns="False"
+                        CanUserAddRows="True"
+                        DataContext="{RelativeSource Self}"
+                        ItemsSource="{StaticResource Conversions}"
+                        Style="{StaticResource DataGridStyle}">
+                        <DataGrid.OpacityMask>
+                            <VisualBrush Visual="{Binding ElementName=gridMask}" />
+                        </DataGrid.OpacityMask>
+
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn>
+                                <DataGridTemplateColumn.Header>
+                                    <Button
+                                        Width="{Binding Height, RelativeSource={RelativeSource Self}}"
+                                        Content="🞤"
+                                        Style="{StaticResource ButtonStyle}" />
+
+                                </DataGridTemplateColumn.Header>
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Width="{Binding Height, RelativeSource={RelativeSource Self}}" Style="{StaticResource ButtonStyle}">
+                                            <Path
+                                                Data="M 0 0 H 98"
+                                                Stretch="Fill"
+                                                Stroke="{StaticResource AccentForeground}"
+                                                StrokeThickness="2" />
+                                        </Button>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn MinWidth="200" Header="Input Unit">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="3,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox
+                                                Name="systemSelector"
+                                                Margin="1,0"
+                                                ItemsSource="{Binding Systems, Source={StaticResource Systems}}"
+                                                Style="{StaticResource ComboBoxStyle}" />
+                                            <ComboBox
+                                                Name="unitSelector"
+                                                Grid.Column="1"
+                                                Margin="1,0"
+                                                DisplayMemberPath="FullName"
+                                                ItemsSource="{Binding SelectedItem, ElementName=systemSelector, Mode=OneWay, Converter={StaticResource SystemToUnitListConverter}}"
+                                                SelectedItem="{Binding InUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Style="{StaticResource ComboBoxStyle}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn MinWidth="60" Header="Value">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <controls:NumericUpDown
+                                            Margin="1,1"
+                                            HorizontalAlignment="Stretch"
+                                            Value="{Binding InValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn MinWidth="200" Header="Output Unit">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="3,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox
+                                                Name="outSystemSelector"
+                                                Margin="1,0"
+                                                ItemsSource="{Binding Systems, Source={StaticResource Systems}}"
+                                                Style="{StaticResource ComboBoxStyle}" />
+                                            <ComboBox
+                                                Name="outUnitSelector"
+                                                Grid.Column="1"
+                                                Margin="1,0"
+                                                DisplayMemberPath="FullName"
+                                                ItemsSource="{Binding SelectedItem, ElementName=outSystemSelector, Mode=OneWay, Converter={StaticResource SystemToUnitListConverter}}"
+                                                SelectedItem="{Binding OutUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Style="{StaticResource ComboBoxStyle}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn MinWidth="40" Header="Result">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Style="{StaticResource TextBlockStyle}" Text="{Binding OutValue, Mode=OneWay}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </StackPanel>
+
+            <!--    -->
+            <Grid Grid.Row="2">
+                <Border x:Name="commandBoxMask" Style="{StaticResource RoundBorderMaskStyle}" />
+                <TextBox
+                    Margin="5,3"
+                    Style="{StaticResource TextBoxStyle}"
+                    Text="">
+                    <TextBox.OpacityMask>
+                        <VisualBrush Visual="{Binding ElementName=commandBoxMask}" />
+                    </TextBox.OpacityMask>
+                </TextBox>
+            </Grid>
+        </Grid>
+    </Border>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome
+            CaptionHeight="{Binding ActualHeight, ElementName=CaptionBar}"
+            CornerRadius="{StaticResource WindowCornerRadius}"
+            GlassFrameThickness="0"
+            ResizeBorderThickness="{x:Static SystemParameters.WindowResizeBorderThickness}" />
+    </WindowChrome.WindowChrome>
+</Window>
