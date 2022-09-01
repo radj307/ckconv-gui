@@ -15,7 +15,7 @@ namespace ckconv_gui.Measurement
         private readonly string _fullNamePluralExt;
         private readonly bool _pluralIsOverrideNotExt = false;
 
-        public Unit(EMeasurementSystem system, decimal unitcf, string symbol, string? fullName, string fullNamePluralExt = "s")
+        public Unit(EMeasurementSystem system, double unitcf, string symbol, string? fullName, string fullNamePluralExt = "s")
         {
             SystemID = system;
             UnitConversionFactor = unitcf;
@@ -26,7 +26,7 @@ namespace ckconv_gui.Measurement
             ExtraNames = new();
         }
 
-        public Unit(EMeasurementSystem system, decimal unitcf, string symbol, string? fullName, string fullNamePluralExt, bool pluralIsOverrideNotExt, params string[] extraNames)
+        public Unit(EMeasurementSystem system, double unitcf, string symbol, string? fullName, string fullNamePluralExt, bool pluralIsOverrideNotExt, params string[] extraNames)
         {
             SystemID = system;
             UnitConversionFactor = unitcf;
@@ -37,18 +37,21 @@ namespace ckconv_gui.Measurement
             ExtraNames = extraNames.ToList();
         }
 
-        public static readonly Unit NullUnit = new(EMeasurementSystem.None, 1.0m, "null", "null", string.Empty);
+        public static readonly Unit NullUnit = new(EMeasurementSystem.None, 1.0, "null", "null", string.Empty);
         public EMeasurementSystem SystemID { get; private set; }
-        public decimal UnitConversionFactor { get; private set; }
+        public double UnitConversionFactor { get; private set; }
         public string Symbol { get; private set; }
         public List<string> ExtraNames { get; }
         public string FullName
         {
-            get => GetFullName();
+            get => GetFullName(false);
         }
 
         public string GetFullName(bool plural = true) => (plural ? _pluralIsOverrideNotExt ? _fullNamePluralExt : $"{_fullName}{_fullNamePluralExt}" : _fullName) ?? Symbol;
-        public decimal ConvertToBase(decimal value) => value * UnitConversionFactor;
+        public double ConvertToBase(double value) => value * UnitConversionFactor;
         public bool HasUniquePlural() => _pluralIsOverrideNotExt;
+
+        /// <inheritdoc cref="ConversionAPI.GetUnit(string, Unit?)"/>
+        public static Unit? FromString(string s) => ConversionAPI.GetUnit(s);
     };
 }

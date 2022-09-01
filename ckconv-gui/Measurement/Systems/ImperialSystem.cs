@@ -8,35 +8,53 @@ namespace ckconv_gui.Measurement.Systems
     public class ImperialSystem : MeasurementSystem
     {
         static ImperialSystem() => AllUnits.AddRangeIfUnique(StaticUnits);
+
+        public static readonly Unit Twip = new(EMeasurementSystem.Imperial, 1.0 / 17280.0, "", "Twip");
+        public static readonly Unit Thou = new(EMeasurementSystem.Imperial, 1.0 / 12000.0, "th", "Thou");
+        public static readonly Unit Barleycorn = new(EMeasurementSystem.Imperial, 1.0 / 36.0, "Bc", "Barleycorn");
+        public static readonly Unit Inch = new(EMeasurementSystem.Imperial, 1.0 / 12.0, "\"", "Inch", "es", false, "in");
+        public static readonly Unit Hand = new(EMeasurementSystem.Imperial, 1.0 / 3.0, "h", "Hand");
+        public static readonly Unit Feet = new(EMeasurementSystem.Imperial, 1.0, "'", "Foot", "Feet", true, "ft");
+        public static readonly Unit Yard = new(EMeasurementSystem.Imperial, 3.0, "yd", "Yard");
+        public static readonly Unit Chain = new(EMeasurementSystem.Imperial, 66.0, "ch", "Chain");
+        public static readonly Unit Furlong = new(EMeasurementSystem.Imperial, 660.0, "fur", "Furlong");
+        public static readonly Unit Mile = new(EMeasurementSystem.Imperial, 5280.0, "mi", "Mile");
+        public static readonly Unit League = new(EMeasurementSystem.Imperial, 15840.0, "lea", "League");
+        public static readonly Unit Fathom = new(EMeasurementSystem.Imperial, 6.0761, "ftm", "Fathom");
+        public static readonly Unit Cable = new(EMeasurementSystem.Imperial, 607.61, "", "Cable");
+        public static readonly Unit NauticalMile = new(EMeasurementSystem.Imperial, 6076.1, "nmi", "NauticalMile", "s", false, "Nautical Mile", "nmile");
+        public static readonly Unit Link = new(EMeasurementSystem.Imperial, 66.0 / 100.0, "", "Link");
+        public static readonly Unit Rod = new(EMeasurementSystem.Imperial, 66.0 / 4.0, "rd", "Rod");
+
         public static readonly ObservableImmutableList<Unit> StaticUnits = new()
         {
-            new(EMeasurementSystem.Imperial, 1.0m / 17280.0m, "", "Twip"),
-            new(EMeasurementSystem.Imperial, 1.0m / 12000.0m, "th", "Thou"),
-            new(EMeasurementSystem.Imperial, 1.0m / 36.0m, "Bc", "Barleycorn"),
-            new(EMeasurementSystem.Imperial, 1.0m / 12.0m, "\"", "Inch", "es", false, "in"),
-            new(EMeasurementSystem.Imperial, 1.0m / 3.0m, "h", "Hand"),
-            new(EMeasurementSystem.Imperial, 1.0m, "'", "Foot", "Feet", true, "ft"),
-            new(EMeasurementSystem.Imperial, 3.0m, "yd", "Yard"),
-            new(EMeasurementSystem.Imperial, 66.0m, "ch", "Chain"),
-            new(EMeasurementSystem.Imperial, 660.0m, "fur", "Furlong"),
-            new(EMeasurementSystem.Imperial, 5280.0m, "mi", "Mile"),
-            new(EMeasurementSystem.Imperial, 15840.0m, "lea", "League"),
-            new(EMeasurementSystem.Imperial, 6.0761m, "ftm", "Fathom"),
-            new(EMeasurementSystem.Imperial, 607.61m, "", "Cable"),
-            new(EMeasurementSystem.Imperial, 6076.1m, "nmi", "NauticalMile", "s", false, "Nautical Mile", "nmile"),
-            new(EMeasurementSystem.Imperial, 66.0m / 100.0m, "", "Link"),
-            new(EMeasurementSystem.Imperial, 66.0m / 4.0m, "rd", "Rod"),
+            Twip,
+            Thou,
+            Barleycorn,
+            Inch,
+            Hand,
+            Feet,
+            Yard,
+            Chain,
+            Furlong,
+            Mile,
+            League,
+            Fathom,
+            Cable,
+            NauticalMile,
+            Link,
+            Rod,
         };
 
-        public ImperialSystem() : base(EMeasurementSystem.Imperial, StaticUnits, StaticUnits.First(u => u.UnitConversionFactor.Equals(1m))) { }
+        public ImperialSystem() : base(EMeasurementSystem.Imperial, StaticUnits, StaticUnits.First(u => u.UnitConversionFactor.Equals(1))) { }
 
         public new static Unit? Find(string s)
         {
             foreach (Unit u in StaticUnits)
             {
-                if (u.HasUniquePlural() && (CompareUnitName(s, u.GetFullName(false)) || CompareUnitName(s, u.GetFullName(true))))
-                    return u;
-                if (CompareUnitSymbol(s, u.Symbol) || CompareUnitName(s, u.GetFullName()) || CompareUnitExtraNames(s, u.ExtraNames))
+                if ((u.Symbol.Length > 0 && s.Equals(u.Symbol, System.StringComparison.Ordinal))
+                    || s.EqualsAny(System.StringComparison.OrdinalIgnoreCase, u.GetFullName(false), u.GetFullName(true))
+                    || s.EqualsAny(System.StringComparison.OrdinalIgnoreCase, u.ExtraNames.AsEnumerable()))
                     return u;
             }
             return null;

@@ -60,5 +60,21 @@ namespace TypeExtensions
         /// </summary>
         /// <inheritdoc cref="EqualsAny(string, StringComparison, string[])"/>
         public static bool EqualsAny(this string s, params string[] compare) => s.EqualsAny(StringComparison.Ordinal, compare);
+        /// <summary>
+        /// Checks if <paramref name="s"/> is equal to any of the given <paramref name="other"/> strings.
+        /// </summary>
+        /// <param name="s">A string instance.</param>
+        /// <param name="other">Any number of object instances to compare.</param>
+        /// <param name="sCompareType">The <see cref="StringComparison"/> type to use.</param>
+        /// <returns><see langword="true"/> when <paramref name="s"/> matches any of the given comparison objects; otherwise <see langword="false"/></returns>
+        public static bool EqualsAny(this string? s, IEnumerable<string?>? other, StringComparison sCompareType = StringComparison.Ordinal)
+        {
+            if (other is null) return false;
+            if (s is null) return other.Any((s) => s is null);
+            foreach (var o in other)
+                if (s.Equals(o, sCompareType))
+                    return true;
+            return false;
+        }
     }
 }

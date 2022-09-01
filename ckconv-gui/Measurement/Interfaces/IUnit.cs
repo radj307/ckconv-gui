@@ -6,7 +6,7 @@ namespace ckconv_gui.Interfaces
     public interface IUnit
     {
         EMeasurementSystem SystemID { get; }
-        decimal UnitConversionFactor { get; }
+        double UnitConversionFactor { get; }
         string FullName { get; }
         string Symbol { get; }
         List<string> ExtraNames { get; }

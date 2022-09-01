@@ -17,10 +17,22 @@ namespace ckconv_gui.Measurement.Systems
         public static ObservableImmutableList<Unit> AllUnits { get; } = new();
 
         public Unit Base { get; }
+        /// <summary>
+        /// The string representation of the number base for this measurement system.
+        /// </summary>
+        public virtual string? BaseString => Base.ToString();
 
         public MeasurementSystem(EMeasurementSystem systemID, ObservableImmutableList<Unit> units, Unit @base)
         {
             AllUnits.AddRangeIfUnique(units);
+            ID = systemID;
+            Units = units;
+            Base = @base;
+        }
+        public MeasurementSystem(EMeasurementSystem systemID, string name, ObservableImmutableList<Unit> units, Unit @base)
+        {
+            AllUnits.AddRangeIfUnique(units);
+            _name = name;
             ID = systemID;
             Units = units;
             Base = @base;
@@ -45,9 +57,9 @@ namespace ckconv_gui.Measurement.Systems
         {
             foreach (Unit u in Units)
             {
-                if (u.HasUniquePlural() && (CompareUnitName(s, u.GetFullName(false)) || CompareUnitName(s, u.GetFullName(true))))
-                    return u;
-                if (CompareUnitSymbol(s, u.Symbol) || CompareUnitName(s, u.GetFullName()) || CompareUnitExtraNames(s, u.ExtraNames))
+                if ((u.Symbol.Length > 0 && s.Equals(u.Symbol, System.StringComparison.Ordinal))
+                    || s.EqualsAny(System.StringComparison.OrdinalIgnoreCase, u.GetFullName(false), u.GetFullName(true))
+                    || s.EqualsAny(System.StringComparison.OrdinalIgnoreCase, u.ExtraNames.AsEnumerable()))
                     return u;
             }
             return null;

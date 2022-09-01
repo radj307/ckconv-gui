@@ -8,17 +8,15 @@
     xmlns:localCollections="clr-namespace:ckconv_gui.Collections"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:measure="clr-namespace:ckconv_gui.Measurement"
+    xmlns:systems="clr-namespace:ckconv_gui.Measurement.Systems"
     x:Name="window"
     Title="Creation Kit Unit Converter"
-    Width="500"
-    Height="100"
-    Margin="0"
-    Padding="0"
     AllowsTransparency="True"
     DataContext="{RelativeSource Self}"
     FontFamily="{StaticResource InterFont}"
     FontSize="{StaticResource GlobalFontSize}"
     Icon="/Resources/icons/ckconv.ico"
+    ResizeMode="NoResize"
     SizeToContent="WidthAndHeight"
     WindowStyle="None"
     mc:Ignorable="d">
@@ -41,12 +39,54 @@
         <SolidColorBrush x:Key="ControlBackgroundIsPressedBrush" Color="#CCC" />
         <SolidColorBrush x:Key="ControlForegroundBrush" Color="#000" />
 
-        <measure:ConversionList x:Key="Conversions" />
-        <localCollections:SystemsList x:Key="Systems" />
-        <helpers:SystemToUnitListConverter x:Key="SystemToUnitListConverter" />
-        <helpers:StringToDecimalConverter x:Key="StringToDecimalConverter" />
         <measure:ExpressionBuilder x:Key="exprBuilder" />
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+
+        <measure:TwoWayConversionList x:Key="Conversions" />
+
+        <DataTemplate x:Key="UnitTemplate" DataType="{x:Type measure:Unit}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Margin="3,1" Text="{Binding FullName}" />
+                <TextBlock
+                    Grid.Column="1"
+                    Margin="3,1"
+                    Text="{Binding UnitConversionFactor}" />
+            </Grid>
+        </DataTemplate>
+        <HierarchicalDataTemplate
+            x:Key="MeasurementSystemTemplate"
+            DataType="{x:Type systems:MeasurementSystem}"
+            ItemTemplate="{StaticResource UnitTemplate}"
+            ItemsSource="{Binding Path=Units}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <TextBlock Margin="3,1" Text="{Binding Name}" />
+            </Grid>
+
+        </HierarchicalDataTemplate>
+        <Style TargetType="{x:Type TreeViewItem}">
+            <Setter Property="Foreground" Value="{StaticResource TextBoxForeground}" />
+            <Setter Property="Margin" Value="3,1" />
+        </Style>
+        <Style TargetType="{x:Type TreeView}">
+            <Setter Property="Padding" Value="5,3" />
+            <Setter Property="Background" Value="{StaticResource TextBoxBackground}" />
+            <Setter Property="Foreground" Value="{StaticResource TextBoxForeground}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <!--<Setter Property="FocusVisualStyle" Value="{StaticResource CustomFocusVisualStyle}" />-->
+        </Style>
+        <!--<Style BasedOn="{StaticResource ExpanderStyle}" TargetType="{x:Type Expander}">
+            <Setter Property="FlowDirection" Value="RightToLeft" />
+        </Style>-->
+
+        <helpers:MeasurementSystemSelectorViewModel x:Key="SystemVM" />
     </Window.Resources>
 
     <!--  Layout  -->
@@ -55,6 +95,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="24" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
             <!--  Caption Bar  -->
@@ -65,6 +106,8 @@
                         <Setter Property="Background" Value="#0000" />
                         <Setter Property="BorderThickness" Value="0" />
                         <Setter Property="Foreground" Value="{StaticResource TextBoxForegroundBrush}" />
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                        <Setter Property="IsTabStop" Value="False" />
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="{x:Type Button}">
@@ -127,129 +170,159 @@
                     Content="❌" />
             </Grid>
 
-            <!--  CommandBox  -->
             <Border
                 Grid.Row="1"
-                Margin="5,3"
-                Background="{StaticResource TextBoxBackground}"
-                Style="{StaticResource SectionStyle}">
-                <Grid>
+                Margin="0,2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Background="#20FFFFFF">
+                <Grid
+                    Grid.Row="1"
+                    Margin="10,4"
+                    HorizontalAlignment="Stretch">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-
-                    <Grid Grid.Column="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid
+                        Grid.Column="0"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Center"
+                        Background="{StaticResource TextBoxBackground}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
                         <TextBox
                             x:Name="commandBox"
-                            Margin="5,3"
-                            VerticalAlignment="Center"
+                            Margin="0,4"
+                            VerticalAlignment="Stretch"
+                            VerticalContentAlignment="Center"
                             Background="#0000"
                             BorderThickness="0"
-                            KeyDown="commandBox_KeyDown"
-                            Style="{StaticResource TextBoxStyle}"
-                            Text="{Binding Text, Source={StaticResource exprBuilder}, Mode=TwoWay, UpdateSourceTrigger=Explicit}" />
+                            Foreground="{StaticResource TextBoxForeground}"
+                            Text="{Binding Text, Source={StaticResource exprBuilder}, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                         <TextBlock
-                            Margin="10,3"
-                            VerticalAlignment="Center"
-                            Style="{StaticResource WatermarkTextBlockStyle}"
-                            Text="Enter a conversion expression..."
-                            ToolTip="Accepts conversion expressions in the same format as ckconv CLI: ( &lt;UNIT&gt;  &lt;VALUE&gt;  &lt;OUT_UNIT&gt; )"
+                            Margin="2,4"
+                            VerticalAlignment="Stretch"
+                            Background="#0000"
+                            Foreground="{StaticResource TextBoxForegroundWatermark}"
+                            IsHitTestVisible="False"
+                            Text="500u kilometers ..."
                             Visibility="{Binding Text.IsEmpty, ElementName=commandBox, Converter={StaticResource BoolToVisibilityConverter}}" />
                     </Grid>
+
                     <Button
-                        x:Name="commandBoxCommitButton"
                         Grid.Column="1"
-                        Width="{Binding Height, RelativeSource={RelativeSource Self}, Mode=OneTime}"
-                        VerticalAlignment="Stretch"
+                        Margin="5,3"
+                        Padding="5,3"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Background="{StaticResource AccentGradient}"
                         Click="commandBoxCommitButton_Click"
-                        Content="+"
-                        Style="{StaticResource ButtonStyle}" />
+                        Content="Commit"
+                        FontWeight="Medium"
+                        Foreground="{StaticResource AccentForeground}" />
                 </Grid>
             </Border>
 
-            <!--  DataGrid  -->
-            <StackPanel Grid.Row="2">
-                <Grid>
-                    <Border Style="{StaticResource RoundBorderMaskStyle}">
-                        <ListBox
-                            Margin="5,3"
-                            Background="#0000"
-                            BorderThickness="0"
-                            ItemsSource="{Binding Items, Source={StaticResource Conversions}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate DataType="{x:Type measure:Conversion}">
-                                    <DockPanel FlowDirection="LeftToRight" LastChildFill="True">
 
-                                        <Grid Margin="0,1,3,1">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <ComboBox
-                                                Name="systemSelector"
-                                                Margin="1,0"
-                                                ItemsSource="{Binding Items, Source={StaticResource Systems}}"
-                                                SelectedItem="{Binding InUnit.SystemID, Mode=OneWay}"
-                                                Style="{StaticResource ComboBoxStyle}" />
-                                            <ComboBox
-                                                Name="unitSelector"
-                                                Grid.Column="1"
-                                                Margin="1,0"
-                                                DisplayMemberPath="FullName"
-                                                ItemsSource="{Binding SelectedItem, ElementName=systemSelector, Mode=OneWay, Converter={StaticResource SystemToUnitListConverter}}"
-                                                SelectedItem="{Binding InUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                Style="{StaticResource ComboBoxStyle}" />
-                                        </Grid>
+            <!--  Conversions List  -->
+            <Grid Grid.Row="2">
+                <Border Background="#0000">
+                    <ListBox
+                        Margin="5,3"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        d:ItemsSource="{x:Null}"
+                        Background="#0000"
+                        BorderThickness="0"
+                        ItemsSource="{Binding Items, Source={StaticResource Conversions}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <!--  Force items to fill available horizontal space:  -->
+                            <Style TargetType="{x:Type ListBoxItem}">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type measure:TwoWayConversion}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
 
-                                        <controls:NumericUpDown
-                                            MinWidth="40"
-                                            Margin="3,1"
-                                            HorizontalAlignment="Stretch"
-                                            Value="{Binding InValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <Grid Grid.Column="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox
+                                            Name="leftSystemSelector"
+                                            Margin="1,0"
+                                            ItemsSource="{Binding Items, Source={StaticResource Systems}}"
+                                            SelectedItem="{Binding LeftUnit.SystemID, Mode=OneWay}" />
+                                        <ComboBox
+                                            Grid.Column="1"
+                                            Margin="1,0"
+                                            DisplayMemberPath="FullName"
+                                            ItemsSource="{Binding SelectedItem, ElementName=leftSystemSelector, Mode=OneWay, Converter={StaticResource SystemToUnitListConverter}}"
+                                            SelectedItem="{Binding LeftUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBox Grid.Column="2" Text="{Binding LeftString, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" />
+                                    </Grid>
 
-                                        <Grid Margin="3,1">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <ComboBox
-                                                Name="outSystemSelector"
-                                                Margin="1,0"
-                                                ItemsSource="{Binding Items, Source={StaticResource Systems}}"
-                                                SelectedItem="{Binding OutUnit.SystemID, Mode=OneWay}"
-                                                Style="{StaticResource ComboBoxStyle}" />
-                                            <ComboBox
-                                                Name="outUnitSelector"
-                                                Grid.Column="1"
-                                                Margin="1,0"
-                                                DisplayMemberPath="FullName"
-                                                ItemsSource="{Binding SelectedItem, ElementName=outSystemSelector, Mode=OneWay, Converter={StaticResource SystemToUnitListConverter}}"
-                                                SelectedItem="{Binding OutUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                Style="{StaticResource ComboBoxStyle}" />
-                                        </Grid>
+                                    <Grid Grid.Column="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox
+                                            Name="rightSystemSelector"
+                                            Margin="1,0"
+                                            ItemsSource="{Binding Items, Source={StaticResource Systems}}"
+                                            SelectedItem="{Binding RightUnit.SystemID, Mode=OneWay}" />
+                                        <ComboBox
+                                            Grid.Column="1"
+                                            Margin="1,0"
+                                            DisplayMemberPath="FullName"
+                                            ItemsSource="{Binding SelectedItem, ElementName=rightSystemSelector, Mode=OneWay, Converter={StaticResource SystemToUnitListConverter}}"
+                                            SelectedItem="{Binding RightUnit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBox Grid.Column="2" Text="{Binding RightString, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" />
+                                    </Grid>
 
-                                        <TextBlock
-                                            Margin="3,0"
-                                            VerticalAlignment="Center"
-                                            Style="{StaticResource TextBlockStyle}"
-                                            Text="{Binding OutValue, Mode=OneWay}" />
-                                        <Button
-                                            Name="removeButton"
-                                            Width="{Binding Height, RelativeSource={RelativeSource Self}}"
-                                            Click="removeButton_Click"
-                                            CommandParameter="{Binding}"
-                                            Content="-"
-                                            DockPanel.Dock="Right"
-                                            Style="{StaticResource ButtonStyle}" />
-                                    </DockPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </Border>
-                </Grid>
-            </StackPanel>
+
+                                    <Button
+                                        Name="removeButton"
+                                        Grid.Column="2"
+                                        Margin="1"
+                                        Padding="3,0"
+                                        HorizontalAlignment="Right"
+                                        HorizontalContentAlignment="Center"
+                                        VerticalContentAlignment="Center"
+                                        Click="removeButton_Click"
+                                        CommandParameter="{Binding}"
+                                        Content="❌" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </Grid>
+
+            <TreeView
+                Grid.Row="3"
+                Margin="5,3"
+                ItemTemplate="{StaticResource MeasurementSystemTemplate}"
+                ItemsSource="{Binding Systems, Source={StaticResource SystemVM}, Mode=OneWay}"
+                KeyDown="TreeView_KeyDown"
+                MouseUp="TreeView_MouseUp" />
+
         </Grid>
     </Border>
 

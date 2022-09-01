@@ -5,6 +5,8 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace ckconv_gui
 {
@@ -23,17 +25,20 @@ namespace ckconv_gui
         private ExpressionBuilder ExpressionBuilder => (FindResource("exprBuilder") as ExpressionBuilder)!;
         private void HandleExpressionBuilderPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            ExpressionBuilder.PropertyChanged -= HandleExpressionBuilderPropertyChanged;
             if (sender is ExpressionBuilder exprBuilder && (e.PropertyName?.Equals(nameof(ExpressionBuilder.Conversions)) ?? false))
             {
-                if (exprBuilder.Conversions is not null)
+                if (exprBuilder.Conversions is not null && exprBuilder.Conversions.Length > 0)
                 {
                     Conversions.AddRange(exprBuilder.Conversions.AsEnumerable());
                     exprBuilder.Reset();
                 }
             }
+            ExpressionBuilder.PropertyChanged += HandleExpressionBuilderPropertyChanged;
         }
 
-        private ConversionList Conversions => (this.FindResource("Conversions") as ConversionList)!;
+        private static Settings Settings => (Settings.Default as Settings)!;
+        private TwoWayConversionList Conversions => (FindResource("Conversions") as TwoWayConversionList)!;
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
@@ -65,19 +70,23 @@ namespace ckconv_gui
         }
         private void commandBoxCommitButton_Click(object sender, RoutedEventArgs e)
         {
+            if (ExpressionBuilder.Text is null) return;
             string text = commandBox.Text;
-            if (text.Length == 0 || text.All(char.IsWhiteSpace))
-                return;
-            else if (commandBox.GetBindingExpression(TextBox.TextProperty) is BindingExpression bExpr)
+
+            try
             {
-                try
+                if (commandBox.GetBindingExpression(TextBox.TextProperty) is BindingExpression bExpr)
                 {
                     bExpr.UpdateSource();
                 }
-                catch (Exception ex)
+                if (ExpressionBuilder.Commit() is int parsedCount && parsedCount > 0)
                 {
-                    MessageBox.Show($"Couldn't parse expression '{text}' due to an exception!\n\n{ex.Message}", "Invalid Expression", MessageBoxButton.OK, MessageBoxImage.Error, MessageBoxResult.OK);
+                    ExpressionBuilder.Reset();
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Couldn't parse expression '{text}' due to an exception!\n\n{ex.Message}", "Invalid Expression", MessageBoxButton.OK, MessageBoxImage.Error, MessageBoxResult.OK);
             }
         }
         private void removeButton_Click(object sender, RoutedEventArgs e)
@@ -86,6 +95,34 @@ namespace ckconv_gui
             {
                 var item = b.CommandParameter;
                 Conversions.Remove(item);
+            }
+        }
+
+        private void TreeView_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (!e.Key.Equals(Key.Enter)) return;
+
+            if (sender is TreeView tv)
+            {
+                if (tv.SelectedItem is Unit selectedUnit)
+                {
+                    if (commandBox.Text.Length != 0) commandBox.Text += ' ';
+                    commandBox.Text += (selectedUnit.Symbol.Length > 0 ? selectedUnit.Symbol : selectedUnit.GetFullName(false));
+                }
+            }
+        }
+
+        private void TreeView_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!e.ChangedButton.Equals(MouseButton.Left)) return;
+
+            if (sender is TreeView tv)
+            {
+                if (tv.SelectedItem is Unit selectedUnit)
+                {
+                    if (commandBox.Text.Length != 0) commandBox.Text += ' ';
+                    commandBox.Text += (selectedUnit.Symbol.Length > 0 ? selectedUnit.Symbol : selectedUnit.GetFullName(false));
+                }
             }
         }
     }
